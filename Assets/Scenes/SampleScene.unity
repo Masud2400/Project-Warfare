@@ -348,6 +348,7 @@ MonoBehaviour:
   cameraHolder: {fileID: 1462025782}
   tiltSpeed: 14
   tiltIntensity: 1
+  CapsuleLyingHeight: 0.1
 --- !u!114 &930308060
 MonoBehaviour:
   m_ObjectHideFlags: 0

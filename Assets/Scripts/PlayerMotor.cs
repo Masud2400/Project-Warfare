@@ -12,6 +12,8 @@ public class PlayerMotor : MonoBehaviour
 	private bool IsSprinting;
 	private float tiltTimer;
 	
+	private bool IsLying;
+	
 	[Header ("Player Movement settings")]
 	[SerializeField] private float speed = 5f;
 	[SerializeField] private float gravity = -20f; // Gravity can be higher, like -20f, in games,
@@ -26,6 +28,9 @@ public class PlayerMotor : MonoBehaviour
 	[SerializeField] private float tiltSpeed = 14f;
 	[SerializeField] private float tiltIntensity = 1f;
 	
+	[Header ("Lie Down Settings")]
+	[SerializeField] private float CapsuleLyingHeight = 0.5f;
+	
 	private Vector3 GetCapsuleBottomHemisphere()
 	{
 		return transform.position + Vector3.up * controller.radius;
@@ -34,6 +39,25 @@ public class PlayerMotor : MonoBehaviour
 	private Vector3 GetCapsuleTopHemisphere(float height)
 	{
 		return transform.position + Vector3.up * (height - controller.radius);
+	}
+	
+	private bool CheckHeight(float heightToCheck)
+	{
+		// If not, it should project an imaginary capsule to check if it can stand up
+		Collider[] standingProjection = Physics.OverlapCapsule(
+			GetCapsuleBottomHemisphere(),
+			GetCapsuleTopHemisphere(heightToCheck),
+			controller.radius, -1
+		);
+		foreach(Collider c in standingProjection)
+		{
+			// If collider is not characterController itself, it should return false
+			if(c != controller)
+			{
+				return false;
+			}
+		}
+		return true;
 	}
 	
 	void Start()
@@ -45,8 +69,26 @@ public class PlayerMotor : MonoBehaviour
 	void Update()
 	{
 		isGrounded = controller.isGrounded;
-		// This makes the crouching more slower, like, not snappy
+		
+		// Store the old height before we change it
+		float oldHeight = controller.height;
+
+		// Smoothly adjust height
 		controller.height = Mathf.Lerp(controller.height, targetHeight, Time.deltaTime * 16f);
+		
+		// Smoothly adjust radius
+		float targetRadius = Mathf.Min(0.5f, controller.height * 0.25f); 
+		controller.radius = Mathf.Lerp(controller.radius, targetRadius, Time.deltaTime * 16f);
+
+		// Keep the center strictly at 0 as requested
+		controller.center = new Vector3(0, 0f, 0); 
+
+		// Calculate how much the height changed this frame
+		float heightDifference = controller.height - oldHeight;
+
+		// Adjust the GameObject's position by half of the height difference 
+		// This physically moves the pivot point to keep the feet on the ground
+		transform.position += new Vector3(0, heightDifference / 2f, 0);
 	}
 	
 	public void ProcessMove(Vector2 input)
@@ -97,7 +139,9 @@ public class PlayerMotor : MonoBehaviour
 	
 	public void Jump()
 	{
-		if(isGrounded && !IsCrouching)
+		if(IsCrouching) return;
+		if(IsLying) return;
+		if(isGrounded)
 		{
 			playerVelocity.y = Mathf.Sqrt(jumptHeight * -3.0f * gravity);
 		}
@@ -112,20 +156,8 @@ public class PlayerMotor : MonoBehaviour
 		}
 		else
 		{
-			// If not, it should project an imaginary capsule to check if it can stand up
-			Collider[] standingProjection = Physics.OverlapCapsule(
-				GetCapsuleBottomHemisphere(),
-				GetCapsuleTopHemisphere(CapsuleStandingHeigth),
-				controller.radius, -1
-			);
-			foreach(Collider c in standingProjection)
-			{
-				// If collider is not characterController itself, it should return false
-				if(c != controller)
-				{
-					return false;
-				}
-			}
+			bool successfullyStandUp = CheckHeight(CapsuleStandingHeigth);
+			if(!successfullyStandUp) return false;
 			
 			targetHeight = CapsuleStandingHeigth;
 		}
@@ -136,21 +168,12 @@ public class PlayerMotor : MonoBehaviour
 	
 	public void Crouch()
 	{
-		// After crouching started, it should stop sprinting
-		if(IsSprinting)
-			IsSprinting = false;
+		if (!isGrounded) return;
 		
-		if(isGrounded)
-		{
-			if(!IsCrouching)
-			{
-				SetCrouchingState(true);
-			}
-			else
-			{
-				SetCrouchingState(false);
-			}
-		}
+		// After crouching started, it should stop sprinting 
+		StopSprint();
+		
+		SetCrouchingState(!IsCrouching);
 	}
 	
 	public void StartSprint()
@@ -168,5 +191,25 @@ public class PlayerMotor : MonoBehaviour
 	{
 		IsSprinting = false;
 		speed = 5f;
+	}
+	
+	public void LieDown()
+	{
+		if(!isGrounded) return;
+			
+		if (!IsLying)
+		{
+			targetHeight = CapsuleLyingHeight;
+			IsLying = true;
+		}
+		else
+		{
+			bool successfullyCrouchUp = CheckHeight(CapsuleStandingHeigth);
+			if (successfullyCrouchUp)
+			{
+				targetHeight = CapsuleStandingHeigth;
+				IsLying = false; // Safely no longer lying down
+			}
+		}
 	}
 }

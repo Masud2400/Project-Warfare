@@ -20,6 +20,7 @@ public class InputManager : MonoBehaviour
 		onFoot.Crouch.performed += ctx => motor.Crouch();
 		onFoot.Sprint.started += ctx => motor.StartSprint();
 		onFoot.Sprint.canceled += ctx => motor.StopSprint();
+		onFoot.Lie.performed += ctx => motor.LieDown();
     }
 
     void FixedUpdate()
