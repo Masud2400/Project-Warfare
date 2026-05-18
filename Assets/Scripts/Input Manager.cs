@@ -7,6 +7,7 @@ public class InputManager : MonoBehaviour
 	private PlayerInput.OnFootActions onFoot;
 	private PlayerMotor motor;
 	private PlayerLook look;
+	private Weapon weapon;
 	
     void Awake()
     {
@@ -16,11 +17,13 @@ public class InputManager : MonoBehaviour
 		// ctx is a specific structure used by Unity’s New Input System to provide 
 		// information about the input event that just occurred.
 		look = GetComponent<PlayerLook>();
+		weapon = GetComponentInChildren<Weapon>();
 		onFoot.Jump.performed += ctx => motor.Jump();
 		onFoot.Crouch.performed += ctx => motor.Crouch();
 		onFoot.Sprint.started += ctx => motor.StartSprint();
 		onFoot.Sprint.canceled += ctx => motor.StopSprint();
 		onFoot.Lie.performed += ctx => motor.LieDown();
+		onFoot.Shoot.performed += ctx => weapon.Shoot();
     }
 
     void FixedUpdate()

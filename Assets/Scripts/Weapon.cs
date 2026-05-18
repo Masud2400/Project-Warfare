@@ -1,0 +1,18 @@
+using UnityEngine;
+
+public class Weapon : MonoBehaviour
+{
+	[SerializeField] private Camera mainCamera;
+	
+	[Header("Weapon settings")]
+	[SerializeField] private float range = 100f;
+	
+	public void Shoot()
+	{
+		RaycastHit hit;
+		if(Physics.Raycast(mainCamera.transform.position, mainCamera.transform.forward, out hit, range))
+		{
+			Debug.Log(hit.transform.name);
+		}
+	}
+}

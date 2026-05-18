@@ -14,6 +14,9 @@ public class PlayerMotor : MonoBehaviour
 	
 	private bool IsLying;
 	
+	private bool IsSliding;
+	private float slideSpeed;
+	
 	[Header ("Player Movement settings")]
 	[SerializeField] private float speed = 5f;
 	[SerializeField] private float gravity = -20f; // Gravity can be higher, like -20f, in games,
@@ -69,26 +72,20 @@ public class PlayerMotor : MonoBehaviour
 	void Update()
 	{
 		isGrounded = controller.isGrounded;
-		
-		// Store the old height before we change it
-		float oldHeight = controller.height;
 
-		// Smoothly adjust height
 		controller.height = Mathf.Lerp(controller.height, targetHeight, Time.deltaTime * 16f);
 		
-		// Smoothly adjust radius
 		float targetRadius = Mathf.Min(0.5f, controller.height * 0.25f); 
 		controller.radius = Mathf.Lerp(controller.radius, targetRadius, Time.deltaTime * 16f);
-
-		// Keep the center strictly at 0 as requested
-		controller.center = new Vector3(0, 0f, 0); 
-
-		// Calculate how much the height changed this frame
-		float heightDifference = controller.height - oldHeight;
-
-		// Adjust the GameObject's position by half of the height difference 
-		// This physically moves the pivot point to keep the feet on the ground
-		transform.position += new Vector3(0, heightDifference / 2f, 0);
+		
+		cameraHolder.localPosition = new Vector3(0, controller.height / 2.5f, 0);
+		
+		controller.center = new Vector3(0, controller.height / 2f, 0);
+		
+		if(IsSliding)
+		{
+			Slide();
+		}
 	}
 	
 	public void ProcessMove(Vector2 input)
@@ -98,7 +95,6 @@ public class PlayerMotor : MonoBehaviour
 		moveDirection.z = input.y;
 		// Without time.DeltaTime it would move faster or slower in different computers
 		// This is for horizontal movement
-		
 		controller.Move(transform.TransformDirection(moveDirection) * speed * Time.deltaTime);
 		
 		if (IsSprinting && input.magnitude > 0)
@@ -196,11 +192,18 @@ public class PlayerMotor : MonoBehaviour
 	public void LieDown()
 	{
 		if(!isGrounded) return;
-			
+		
+		if(IsSprinting)
+		{
+			IsSliding = true;
+			slideSpeed = 20f;
+		}
+		
 		if (!IsLying)
 		{
 			targetHeight = CapsuleLyingHeight;
 			IsLying = true;
+			StopSprint();
 		}
 		else
 		{
@@ -210,6 +213,19 @@ public class PlayerMotor : MonoBehaviour
 				targetHeight = CapsuleStandingHeigth;
 				IsLying = false; // Safely no longer lying down
 			}
+		}
+	}
+	
+	private void Slide()
+	{
+		controller.Move(transform.forward * slideSpeed * Time.deltaTime);
+
+		slideSpeed = Mathf.Lerp(slideSpeed, 0f, Time.deltaTime * 2f);
+
+		if (slideSpeed <= 0.1f)
+		{
+			slideSpeed = 0f;
+			IsSliding = false;
 		}
 	}
 }
