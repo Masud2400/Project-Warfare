@@ -3,11 +3,13 @@ using UnityEngine;
 public class Enemy : MonoBehaviour
 {
     private Animator anim;
-	private bool playerDetected;
 
+	[Header("Settings")]
     [SerializeField] private GameObject player;
     [SerializeField] private float speed = 1f;
-	[SerializeField] private float DetectionRange = 5f;
+	[SerializeField] private float DetectionRangeShooting = 5f;
+	[SerializeField] private float DetectionRangeAttacking = 2f;
+	[SerializeField] private float health = 10f;
 
     void Start()
     {
@@ -15,12 +17,27 @@ public class Enemy : MonoBehaviour
     }
 
     void Update()
-    {
-		DetectPlayer();
-		
-        if(playerDetected)
+    {	
+		bool atAttackingRange = DetectPlayer(DetectionRangeAttacking);
+		bool atShootingRange = DetectPlayer(DetectionRangeShooting);
+			
+		if(atShootingRange && atAttackingRange == false)
+		{	
+			int randomChoice = Random.Range(0, 2);
+			
+			switch(randomChoice)
+			{
+				case 0:
+					Shoot();
+					break;
+				case 1:
+					sitShoot();
+					break;
+			}
+		}
+		else if(atAttackingRange)
 		{
-			Shoot();
+			attack();
 		}
 		else
 		{
@@ -28,38 +45,35 @@ public class Enemy : MonoBehaviour
 		}
     }
 	
-	private void DetectPlayer()
+	private bool DetectPlayer(float DetectionRange)
 	{	
-		playerDetected = false;
-
 		Vector3 direction = player.transform.position - transform.position;
 		float sqrDistance = direction.sqrMagnitude;
 
 		Vector3 origin = transform.position + Vector3.up * 1.5f;
 
-		Debug.DrawRay(origin, direction.normalized * DetectionRange, Color.red);
-
 		if (sqrDistance < DetectionRange * DetectionRange)
 		{
 			if (Physics.Raycast(origin, direction.normalized, out RaycastHit hit, DetectionRange))
 			{
-				Debug.Log("Ray hit: " + hit.collider.name + " | Tag: " + hit.collider.tag);
-
 				if (hit.collider.gameObject == player)
 				{
-					playerDetected = true;
+					return true;
 				}
 			}
 		}
+		return false;
 	}
 
     private void Run()
     {
         if(player != null)
-        {
+        {	
 			if(anim != null)
 			{
-				anim.SetFloat("RunShoot", 0);
+				anim.SetBool("isStandShooting", false);
+				anim.SetBool("isSitShooting", false);
+				anim.SetBool("isAttacking", false);
 			}
 			
             Vector3 lookDirection = Vector3.ProjectOnPlane(player.transform.position - transform.position, Vector3.up).normalized;
@@ -75,7 +89,21 @@ public class Enemy : MonoBehaviour
     {
         if(anim != null)
         {
-            anim.SetTrigger("Shot");
+			if(anim.GetBool("isStandShooting"))
+			{
+				anim.SetTrigger("ShotStanding");
+			}
+        }
+    }
+	
+	public void gotShotSitting()
+    {
+        if(anim != null)
+        {
+			if(anim.GetBool("isSitShooting"))
+			{
+				anim.SetTrigger("ShotSitting");
+			}
         }
     }
 
@@ -83,7 +111,55 @@ public class Enemy : MonoBehaviour
     {
         if(anim != null)
 		{
-			anim.SetFloat("RunShoot", 1);
+			anim.SetBool("isStandShooting", true);
+			anim.SetBool("isSitShooting", false);
 		}
+		
+		Vector3 direction = player.transform.position - transform.position;
+		direction.y = 0f;
+		Quaternion targetRotation = Quaternion.LookRotation(direction);
+		transform.rotation = targetRotation * Quaternion.Euler(0, 50, 0);
     }
+	
+	private void sitShoot()
+	{
+		if(anim != null)
+		{
+			anim.SetBool("isSitShooting", true);
+			anim.SetBool("isStandShooting", false);
+		}
+		
+		Vector3 direction = player.transform.position - transform.position;
+		direction.y = 0f;
+		Quaternion targetRotation = Quaternion.LookRotation(direction);
+		transform.rotation = targetRotation * Quaternion.Euler(0, 50, 0);
+	}
+	
+	private void attack()
+	{
+		if(anim != null)
+		{
+			anim.SetBool("isAttacking", true);
+			anim.SetBool("isStandShooting", false);
+			anim.SetBool("isSitShooting", false);
+		}
+	}
+	
+	public void takeDamage()
+	{
+		health -= 2;
+		
+		if(health <= 0)
+		{
+			Die();
+		}
+	}
+	
+	private void Die()
+	{
+		if(anim != null)
+		{
+			
+		}
+	}
 }

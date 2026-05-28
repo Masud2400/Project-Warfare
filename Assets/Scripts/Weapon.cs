@@ -19,6 +19,8 @@ public class Weapon : MonoBehaviour
             if (enemy != null)
             {
                 enemy.gotShotStanding();
+				enemy.gotShotSitting();
+				enemy.takeDamage();
             }
         }
     }

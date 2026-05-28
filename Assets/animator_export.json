@@ -1,0 +1,125 @@
+{
+    "parameters": [
+        {
+            "name": "isStandShooting",
+            "type": "Bool"
+        },
+        {
+            "name": "isSitShooting",
+            "type": "Bool"
+        },
+        {
+            "name": "isAttacking",
+            "type": "Bool"
+        },
+        {
+            "name": "ShotStanding",
+            "type": "Trigger"
+        },
+        {
+            "name": "ShotSitting",
+            "type": "Trigger"
+        }
+    ],
+    "layers": [
+        {
+            "name": "MainAction",
+            "states": [
+                {
+                    "name": "Armature_003_GetShotStanding",
+                    "transitions": [
+                        {
+                            "toState": "Armature_003_StandAndShoot",
+                            "hasExitTime": true,
+                            "duration": 0.25,
+                            "conditions": []
+                        }
+                    ]
+                },
+                {
+                    "name": "Armature_003_Die",
+                    "transitions": []
+                },
+                {
+                    "name": "Armature_003_Running",
+                    "transitions": [
+                        {
+                            "toState": "Armature_003_StandAndShoot",
+                            "hasExitTime": false,
+                            "duration": 0.25,
+                            "conditions": [
+                                "isStandShooting If 0"
+                            ]
+                        },
+                        {
+                            "toState": "Armature_003_SitAndShoot",
+                            "hasExitTime": false,
+                            "duration": 0.25,
+                            "conditions": [
+                                "isSitShooting If 0"
+                            ]
+                        },
+                        {
+                            "toState": "Armature_003_Attack",
+                            "hasExitTime": false,
+                            "duration": 0.25,
+                            "conditions": [
+                                "isAttacking If 0"
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "name": "Armature_003_SitAndShoot",
+                    "transitions": [
+                        {
+                            "toState": "Armature_003_Running",
+                            "hasExitTime": true,
+                            "duration": 0.25,
+                            "conditions": [
+                                "isSitShooting IfNot 0"
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "name": "Armature_003_StandAndShoot",
+                    "transitions": [
+                        {
+                            "toState": "Armature_003_Running",
+                            "hasExitTime": true,
+                            "duration": 0.25,
+                            "conditions": [
+                                "isStandShooting IfNot 0"
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "name": "Armature_003_GetShotSitting",
+                    "transitions": [
+                        {
+                            "toState": "Armature_003_SitAndShoot",
+                            "hasExitTime": true,
+                            "duration": 0.25,
+                            "conditions": []
+                        }
+                    ]
+                },
+                {
+                    "name": "Armature_003_Attack",
+                    "transitions": [
+                        {
+                            "toState": "Armature_003_Running",
+                            "hasExitTime": true,
+                            "duration": 0.25,
+                            "conditions": [
+                                "isAttacking IfNot 0"
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}
