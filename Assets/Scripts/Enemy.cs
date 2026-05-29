@@ -2,47 +2,112 @@ using UnityEngine;
 
 public class Enemy : MonoBehaviour
 {
+	private enum State
+    {
+        Running,
+        Attacking,
+        StandingShooting,
+        CrouchShooting,
+        Dead
+    }
+	
     private Animator anim;
+	private CharacterController controller;
+	private State currentState = State.Running;
+	private float stanceTimer = 0f;
 
-	[Header("Settings")]
+	[Header ("Game Objects")]
     [SerializeField] private GameObject player;
+	[SerializeField] private PlayerHealth playerHealthScript;
+	
+	[Header ("Settings")]
     [SerializeField] private float speed = 1f;
 	[SerializeField] private float DetectionRangeShooting = 5f;
 	[SerializeField] private float DetectionRangeAttacking = 2f;
-	[SerializeField] private float health = 10f;
+	[SerializeField] private float health = 20f;
+	[SerializeField] private float stanceChangeCooldown = 1.5f;
 
     void Start()
     {
         anim = GetComponentInChildren<Animator>();
+		controller = GetComponent<CharacterController>();
     }
 
     void Update()
     {	
-		bool atAttackingRange = DetectPlayer(DetectionRangeAttacking);
-		bool atShootingRange = DetectPlayer(DetectionRangeShooting);
-			
-		if(atShootingRange && atAttackingRange == false)
-		{	
-			int randomChoice = Random.Range(0, 2);
-			
-			switch(randomChoice)
-			{
-				case 0:
-					Shoot();
-					break;
-				case 1:
-					sitShoot();
-					break;
-			}
-		}
-		else if(atAttackingRange)
+		if(currentState == State.Dead) return;
+		
+		if (stanceTimer > 0)
 		{
-			attack();
+			stanceTimer -= Time.deltaTime;
+		}
+		
+		bool atAttackingRange = DetectPlayer(DetectionRangeAttacking);
+        bool atShootingRange = DetectPlayer(DetectionRangeShooting);
+		
+		DetermineState(atAttackingRange, atShootingRange);
+
+        ExecuteCurrentState();
+    }
+	
+	private void DetermineState(bool atAttackingRange, bool atShootingRange)
+	{
+		if (atAttackingRange)
+		{
+			TransitionToState(State.Attacking);
+			return; 
+		}
+
+		if (stanceTimer > 0 && (currentState == State.StandingShooting || currentState == State.CrouchShooting))
+		{
+			return; 
+		}
+
+		if (atShootingRange)
+		{
+			if (currentState != State.StandingShooting && currentState != State.CrouchShooting)
+			{
+				State randomShootState = (Random.Range(0, 2) == 0) ? State.StandingShooting : State.CrouchShooting;
+				TransitionToState(randomShootState);
+
+				stanceTimer = stanceChangeCooldown; 
+			}
 		}
 		else
 		{
-			Run();
+			TransitionToState(State.Running);
 		}
+	}
+	
+	private void TransitionToState(State newState)
+    {
+        if (currentState == newState) return;
+
+        currentState = newState;
+
+        if (anim != null)
+        {
+            anim.SetBool("isStandShooting", currentState == State.StandingShooting);
+            anim.SetBool("isSitShooting", currentState == State.CrouchShooting);
+            anim.SetBool("isAttacking", currentState == State.Attacking);
+        }
+    }
+	
+	private void ExecuteCurrentState()
+    {
+        switch (currentState)
+        {
+            case State.Running:
+                RunAction();
+                break;
+            case State.StandingShooting:
+            case State.CrouchShooting:
+                AimAtPlayer();
+                break;
+            case State.Attacking:
+				Attack();
+                break;
+        }
     }
 	
 	private bool DetectPlayer(float DetectionRange)
@@ -58,6 +123,7 @@ public class Enemy : MonoBehaviour
 			{
 				if (hit.collider.gameObject == player)
 				{
+					playerHealthScript.takeDamage();
 					return true;
 				}
 			}
@@ -65,19 +131,13 @@ public class Enemy : MonoBehaviour
 		return false;
 	}
 
-    private void Run()
+    private void RunAction()
     {
         if(player != null)
         {	
-			if(anim != null)
-			{
-				anim.SetBool("isStandShooting", false);
-				anim.SetBool("isSitShooting", false);
-				anim.SetBool("isAttacking", false);
-			}
-			
             Vector3 lookDirection = Vector3.ProjectOnPlane(player.transform.position - transform.position, Vector3.up).normalized;
-			transform.position += lookDirection * speed * Time.deltaTime;
+			controller.Move(transform.TransformDirection(lookDirection) * speed * Time.deltaTime);
+			
 			if (lookDirection.sqrMagnitude != 0f)
 			{
 				transform.forward = lookDirection;
@@ -85,81 +145,54 @@ public class Enemy : MonoBehaviour
         }
     }
 
-    public void gotShotStanding()
-    {
-        if(anim != null)
-        {
-			if(anim.GetBool("isStandShooting"))
-			{
-				anim.SetTrigger("ShotStanding");
-			}
-        }
-    }
-	
-	public void gotShotSitting()
-    {
-        if(anim != null)
-        {
-			if(anim.GetBool("isSitShooting"))
-			{
-				anim.SetTrigger("ShotSitting");
-			}
-        }
-    }
-
-    private void Shoot()
-    {
-        if(anim != null)
-		{
-			anim.SetBool("isStandShooting", true);
-			anim.SetBool("isSitShooting", false);
-		}
-		
+    private void AimAtPlayer()
+    {		
 		Vector3 direction = player.transform.position - transform.position;
 		direction.y = 0f;
 		Quaternion targetRotation = Quaternion.LookRotation(direction);
 		transform.rotation = targetRotation * Quaternion.Euler(0, 50, 0);
     }
 	
-	private void sitShoot()
+	private void Attack()
 	{
-		if(anim != null)
-		{
-			anim.SetBool("isSitShooting", true);
-			anim.SetBool("isStandShooting", false);
-		}
-		
 		Vector3 direction = player.transform.position - transform.position;
 		direction.y = 0f;
 		Quaternion targetRotation = Quaternion.LookRotation(direction);
-		transform.rotation = targetRotation * Quaternion.Euler(0, 50, 0);
-	}
-	
-	private void attack()
-	{
-		if(anim != null)
-		{
-			anim.SetBool("isAttacking", true);
-			anim.SetBool("isStandShooting", false);
-			anim.SetBool("isSitShooting", false);
-		}
+		transform.rotation = targetRotation * Quaternion.Euler(0, 30, 0);
+		
+		playerHealthScript.takeDamage();
 	}
 	
 	public void takeDamage()
-	{
-		health -= 2;
-		
-		if(health <= 0)
-		{
-			Die();
-		}
-	}
+    {
+        health -= 2;
+
+        if (health <= 0)
+        {
+            Die();
+        }
+        else
+        {
+            if (anim != null)
+            {
+                if (currentState == State.StandingShooting) anim.SetTrigger("ShotStanding");
+                if (currentState == State.CrouchShooting) anim.SetTrigger("ShotSitting");
+            }
+        }
+    }
 	
 	private void Die()
 	{
+		currentState = State.Dead;
+		
 		if(anim != null)
 		{
-			
+			anim.SetTrigger("isDead");
+		}
+		
+		if (controller != null)
+		{
+			controller.enabled = false;
 		}
 	}
 }

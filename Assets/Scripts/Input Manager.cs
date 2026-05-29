@@ -23,12 +23,20 @@ public class InputManager : MonoBehaviour
 		onFoot.Sprint.started += ctx => motor.StartSprint();
 		onFoot.Sprint.canceled += ctx => motor.StopSprint();
 		onFoot.Lie.performed += ctx => motor.LieDown();
-		onFoot.Shoot.performed += ctx => weapon.Shoot();
     }
 
     void FixedUpdate()
     {
         motor.ProcessMove(onFoot.Movement.ReadValue<Vector2>());
+		
+		if (onFoot.Shoot.IsPressed())
+		{
+			weapon.Shoot();
+		}
+		else
+		{
+			weapon.StopShooting();
+		}
     }
 	
 	void LateUpdate()
