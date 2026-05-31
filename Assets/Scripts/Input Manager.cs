@@ -20,14 +20,29 @@ public class InputManager : MonoBehaviour
 		weapon = GetComponentInChildren<Weapon>();
 		onFoot.Jump.performed += ctx => motor.Jump();
 		onFoot.Crouch.performed += ctx => motor.Crouch();
-		onFoot.Sprint.started += ctx => motor.StartSprint();
-		onFoot.Sprint.canceled += ctx => motor.StopSprint();
 		onFoot.Lie.performed += ctx => motor.LieDown();
+		onFoot.Reload.performed += ctx => weapon.Reload();
     }
 
     void FixedUpdate()
-    {
-        motor.ProcessMove(onFoot.Movement.ReadValue<Vector2>());
+    {	
+		if(onFoot.Movement.IsPressed())
+		{
+			motor.ProcessMove(onFoot.Movement.ReadValue<Vector2>());
+		}
+		else
+		{
+			motor.StopWalking();
+		}
+		
+		if(onFoot.Sprint.IsPressed())
+		{
+			motor.StartSprint();
+		}
+		else
+		{
+			motor.StopSprint();
+		}
 		
 		if (onFoot.Shoot.IsPressed())
 		{
