@@ -14,7 +14,8 @@ public class Weapon : MonoBehaviour
 	
 	private Animator anim;
 	private bool shootingState;
-	private int bulletCount = 35;
+	private int bulletCount = 50;
+	AudioManager audioManager;
 	private State currentState = State.Idle;
 	
 	[Header ("Game objects")]
@@ -25,6 +26,11 @@ public class Weapon : MonoBehaviour
     [Header("Weapon settings")]
     [SerializeField] private float range = 100f;
 	[SerializeField] private ParticleSystem muzzleFlash;
+	
+	void Awake()
+	{
+		audioManager = GameObject.FindGameObjectWithTag("Audio").GetComponent<AudioManager>();
+	}
 	
 	void Start()
     {
@@ -83,8 +89,14 @@ public class Weapon : MonoBehaviour
     {
 		if (bulletCount <= 0)
 		{
-			shootingState = false;
+			StopShooting();
 			return;
+		}
+		
+		if (!shootingState)
+		{
+			shootingState = true;
+			audioManager.StartShootingAudio();
 		}
 		
         RaycastHit hit;
@@ -98,7 +110,6 @@ public class Weapon : MonoBehaviour
             }
         }
 		muzzleFlash.Play();
-		shootingState = true;
 		
 		if (bulletCount > 0)
         {
@@ -110,18 +121,21 @@ public class Weapon : MonoBehaviour
 	public void StopShooting()
 	{
 		shootingState = false;
+		audioManager.StopShootingAudio();
 	}
 	
 	public void Reload()
 	{
 		currentState = State.Reloading;
 		
+		audioManager.ReloadAudio();
+		
 		if(anim != null)
 		{
 			anim.SetTrigger("Reload");
 		}
 		
-		bulletCount = 35;
+		bulletCount = 50;
 		bullets.text = bulletCount.ToString();
 	}
 }

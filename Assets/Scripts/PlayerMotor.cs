@@ -11,6 +11,8 @@ public class PlayerMotor : MonoBehaviour
         Lying,
         Sliding
     }
+	
+	AudioManager audioManager;
 
     [Header("State")]
     public PlayerMovementState currentState = PlayerMovementState.Idle;
@@ -45,6 +47,11 @@ public class PlayerMotor : MonoBehaviour
     [Header ("Lie Down Settings")]
     [SerializeField] private float CapsuleLyingHeight = 0.5f;
     
+	void Awake()
+	{
+		audioManager = GameObject.FindGameObjectWithTag("Audio").GetComponent<AudioManager>();
+	}
+	
     private Vector3 GetCapsuleBottomHemisphere()
     {
         return transform.position + Vector3.up * controller.radius;
@@ -109,6 +116,7 @@ public class PlayerMotor : MonoBehaviour
         Vector3 moveDirection = Vector3.zero;
         moveDirection.x = input.x;
         moveDirection.z = input.y;
+		bool isMoving = input.magnitude > 0.1f;
         
         controller.Move(transform.TransformDirection(moveDirection) * currentSpeed * Time.deltaTime);
 
@@ -116,6 +124,19 @@ public class PlayerMotor : MonoBehaviour
         {
             currentState = input.magnitude > 0 ? PlayerMovementState.Walking : PlayerMovementState.Idle;
         }
+		
+		// --------------- Audio Part ----------------------
+		if (currentState == PlayerMovementState.Walking && isMoving)
+		{
+			audioManager.StopRunningSteps();
+			audioManager.StartFootsteps();
+		}
+		else if (currentState == PlayerMovementState.Sprinting && isMoving)
+		{
+			audioManager.StopFootsteps();
+			audioManager.StartRunningSteps();
+		}
+		// ------------- End Audio Part -------------------
         
         if (currentState == PlayerMovementState.Sprinting && input.magnitude > 0)
         {
@@ -142,6 +163,7 @@ public class PlayerMotor : MonoBehaviour
         if (currentState == PlayerMovementState.Walking)
         {
             currentState = PlayerMovementState.Idle;
+			audioManager.StopFootsteps();
         }
     }
     
@@ -206,6 +228,7 @@ public class PlayerMotor : MonoBehaviour
             currentState = PlayerMovementState.Idle;
         }
         currentSpeed = walkingSpeed;
+		audioManager.StopRunningSteps();
     }
     
     public void LieDown()

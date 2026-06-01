@@ -15,17 +15,24 @@ public class Enemy : MonoBehaviour
 	private CharacterController controller;
 	private State currentState = State.Running;
 	private float stanceTimer = 0f;
+	AudioManager audioManager;
+	private float verticalVelocity = 0f;
+	private float gravity = -9.81f;
 
 	[Header ("Game Objects")]
     [SerializeField] private GameObject player;
 	[SerializeField] private PlayerHealth playerHealthScript;
 	
 	[Header ("Settings")]
-    [SerializeField] private float speed = 1f;
 	[SerializeField] private float DetectionRangeShooting = 5f;
 	[SerializeField] private float DetectionRangeAttacking = 2f;
-	[SerializeField] private float health = 20f;
+	[SerializeField] private float health = 100f;
 	[SerializeField] private float stanceChangeCooldown = 1.5f;
+
+	void Awake()
+	{
+		audioManager = GameObject.FindGameObjectWithTag("Audio").GetComponent<AudioManager>();
+	}
 
     void Start()
     {
@@ -48,6 +55,18 @@ public class Enemy : MonoBehaviour
 		DetermineState(atAttackingRange, atShootingRange);
 
         ExecuteCurrentState();
+		
+		if (controller.isGrounded)
+		{
+			verticalVelocity = -2f;
+		}
+		else
+		{
+			verticalVelocity += gravity * Time.deltaTime;
+		}
+
+		Vector3 gravityMove = new Vector3(0, verticalVelocity, 0);
+		controller.Move(gravityMove * Time.deltaTime);
     }
 	
 	private void DetermineState(bool atAttackingRange, bool atShootingRange)
@@ -55,6 +74,7 @@ public class Enemy : MonoBehaviour
 		if (atAttackingRange)
 		{
 			TransitionToState(State.Attacking);
+			audioManager.StopEnemyShooting();
 			return; 
 		}
 
@@ -70,12 +90,15 @@ public class Enemy : MonoBehaviour
 				State randomShootState = (Random.Range(0, 2) == 0) ? State.StandingShooting : State.CrouchShooting;
 				TransitionToState(randomShootState);
 
-				stanceTimer = stanceChangeCooldown; 
+				stanceTimer = stanceChangeCooldown;
+
+				audioManager.StartEnemyShooting();
 			}
 		}
 		else
 		{
 			TransitionToState(State.Running);
+			audioManager.StopEnemyShooting();
 		}
 	}
 	
@@ -136,7 +159,6 @@ public class Enemy : MonoBehaviour
         if(player != null)
         {	
             Vector3 lookDirection = Vector3.ProjectOnPlane(player.transform.position - transform.position, Vector3.up).normalized;
-			controller.Move(transform.TransformDirection(lookDirection) * speed * Time.deltaTime);
 			
 			if (lookDirection.sqrMagnitude != 0f)
 			{
@@ -194,5 +216,8 @@ public class Enemy : MonoBehaviour
 		{
 			controller.enabled = false;
 		}
+		
+		audioManager.playDeathAudio();
+		audioManager.StopEnemyShooting();
 	}
 }
