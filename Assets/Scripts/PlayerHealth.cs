@@ -1,23 +1,105 @@
 using UnityEngine;
+using UnityEngine.UI;
+using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
 
 public class PlayerHealth : MonoBehaviour
 {
-	private float timer = 1;
-	
-	[Header ("Player settings")]
-	[SerializeField] private float playerHealth = 20f;
-	[SerializeField] private float damageInterval = 1f;
-	
+    [Header("Player Settings")]
+    [SerializeField] private float maxHealth = 20f;
+    [SerializeField] private float currentHealth = 20f;
+    [SerializeField] private float damageInterval = 1f;
+    [SerializeField] private float healDelay = 5f;
+	[SerializeField] private Image damageAlertImage;
+	[SerializeField] private Animator anim;
+	[SerializeField] private Transform mainCam;
+
+    private float damageTimer;
+    private float healTimer;
+    private bool tookDamageThisFrame;
+	public Volume globalVolume;
+    private DepthOfField depthOfField;
+	private bool isDead = false;
+
+    void Start()
+    {
+        currentHealth = maxHealth;
+        damageTimer = 0f; 
+        healTimer = healDelay;
+		
+		if (globalVolume.profile.TryGet<DepthOfField>(out var dof))
+        {
+            depthOfField = dof;
+            depthOfField.mode.value = DepthOfFieldMode.Off; 
+        }
+    }
+
+    void Update()
+    {
+        if (!tookDamageThisFrame)
+        {
+            healTimer -= Time.deltaTime;
+            if (healTimer <= 0f && currentHealth < maxHealth)
+            {
+                currentHealth = maxHealth;
+                Debug.Log("Health fully restored!");
+            }
+        }
+
+        tookDamageThisFrame = false;
+		
+		if (currentHealth >= maxHealth)
+		{
+			damageAlertImage.gameObject.SetActive(false);
+		}
+		
+		if(currentHealth < 0 && !isDead)
+		{
+			isDead = true;
+			
+			GetComponent<PlayerLook>().isEnabled = false;
+			GetComponent<PlayerMotor>().isEnabled = false;
+			
+			Vector3 targetPosition = new Vector3(mainCam.transform.position.x, 0.2f, mainCam.transform.position.z);
+			Quaternion targetRotation = Quaternion.Euler(0, mainCam.transform.eulerAngles.y, -90f);
+
+			mainCam.transform.position = targetPosition;
+			mainCam.transform.rotation = targetRotation;
+			
+			if (depthOfField != null)
+            {
+                depthOfField.mode.value = DepthOfFieldMode.Bokeh;
+            }
+		}
+    }
+
     public void takeDamage()
-	{	
-		if(timer > 0)
+    {
+		if (isDead) return;
+		
+        tookDamageThisFrame = true;
+        healTimer = healDelay; 
+
+        if (damageTimer > 0)
+        {
+            damageTimer -= Time.deltaTime;
+        }
+        else
+        {
+            currentHealth -= 2;
+            damageTimer = damageInterval; 
+            Debug.Log($"Player took damage. Health: {currentHealth}");
+        }
+		
+		if (damageAlertImage != null)
 		{
-			timer -= Time.deltaTime;
+			damageAlertImage.gameObject.SetActive(true);
+
+			float alpha = 1f - (currentHealth / maxHealth);
+
+			Color color = damageAlertImage.color;
+			color.a = alpha;
+			damageAlertImage.color = color;
 		}
-		else
-		{
-			timer = damageInterval;
-			playerHealth -= 2;
-		}
-	}
+    }
 }

@@ -8,6 +8,7 @@ public class InputManager : MonoBehaviour
 	private PlayerMotor motor;
 	private PlayerLook look;
 	private Weapon weapon;
+	[SerializeField] private Menu menu;
 	
     void Awake()
     {
@@ -22,6 +23,7 @@ public class InputManager : MonoBehaviour
 		onFoot.Crouch.performed += ctx => motor.Crouch();
 		onFoot.Lie.performed += ctx => motor.LieDown();
 		onFoot.Reload.performed += ctx => weapon.Reload();
+		onFoot.PauseGame.performed += ctx => menu.controlGameState(); 
     }
 
     void FixedUpdate()

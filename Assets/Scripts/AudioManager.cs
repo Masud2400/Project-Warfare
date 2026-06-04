@@ -10,6 +10,7 @@ public class AudioManager : MonoBehaviour
 	[SerializeField] private AudioSource reloadingSource;
 	[SerializeField] private AudioSource deathSource;
 	[SerializeField] private AudioSource enemyShootingSource;
+	[SerializeField] private AudioSource attackingSource;
 
     [Header("Music Clips")]
     public AudioClip footsteps;
@@ -18,6 +19,7 @@ public class AudioManager : MonoBehaviour
 	public AudioClip reloading;
 	public AudioClip death;
 	public AudioClip enemyShooting;
+	public AudioClip attackingSound;
 
     public void StartFootsteps()
     {
@@ -90,5 +92,20 @@ public class AudioManager : MonoBehaviour
 	public void StopEnemyShooting()
 	{
 		enemyShootingSource.Stop();
+	}
+	
+	public void StartAttackingSound()
+	{
+		if(!attackingSource.isPlaying)
+		{
+			attackingSource.clip = attackingSound;
+			attackingSource.loop = true;
+			attackingSource.Play();
+		}
+	}
+	
+	public void StopAttackingSound()
+	{
+		attackingSource.Stop();
 	}
 }

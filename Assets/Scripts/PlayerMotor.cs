@@ -28,6 +28,8 @@ public class PlayerMotor : MonoBehaviour
     
     public bool runningState => currentState == PlayerMovementState.Sprinting;
     public bool walkingState => currentState == PlayerMovementState.Walking;
+	
+	public bool isEnabled = true;
     
     [Header ("Player Movement settings")]
     [SerializeField] private float gravity = -20f;
@@ -113,6 +115,8 @@ public class PlayerMotor : MonoBehaviour
     
     public void ProcessMove(Vector2 input)
     {
+		if (!isEnabled) return;
+		
         Vector3 moveDirection = Vector3.zero;
         moveDirection.x = input.x;
         moveDirection.z = input.y;

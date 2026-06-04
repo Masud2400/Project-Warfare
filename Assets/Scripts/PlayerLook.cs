@@ -6,9 +6,12 @@ public class PlayerLook : MonoBehaviour
 	private float xRotation = 0f;
 	[SerializeField] private float xSensitivity = 30f;
 	[SerializeField] private float ySensitivity = 30f;
+	public bool isEnabled = true;
 	
 	public void lookAround(Vector2 input)
     {
+		if (!isEnabled) return;
+		
         float mouseX = input.x;
         float mouseY = input.y;
 

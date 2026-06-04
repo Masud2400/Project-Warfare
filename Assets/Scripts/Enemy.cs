@@ -18,10 +18,13 @@ public class Enemy : MonoBehaviour
 	AudioManager audioManager;
 	private float verticalVelocity = 0f;
 	private float gravity = -9.81f;
+	private bool muzzleFlashPlaying = false;
 
 	[Header ("Game Objects")]
     [SerializeField] private GameObject player;
 	[SerializeField] private PlayerHealth playerHealthScript;
+	[SerializeField] private CharacterController playerController;
+	[SerializeField] private ParticleSystem muzzleFlash;
 	
 	[Header ("Settings")]
 	[SerializeField] private float DetectionRangeShooting = 5f;
@@ -71,10 +74,23 @@ public class Enemy : MonoBehaviour
 	
 	private void DetermineState(bool atAttackingRange, bool atShootingRange)
 	{
+		//------------- Audio Part -----------------//
+		if(currentState == State.Attacking || currentState == State.Running)
+		{
+			audioManager.StopEnemyShooting();
+		}
+		
+		if(currentState != State.Attacking)
+		{
+			audioManager.StopAttackingSound();
+		}
+		//------------- End -----------------//
+		
 		if (atAttackingRange)
 		{
 			TransitionToState(State.Attacking);
-			audioManager.StopEnemyShooting();
+			muzzleFlashPlaying = false;
+			muzzleFlash.Stop();
 			return; 
 		}
 
@@ -93,12 +109,19 @@ public class Enemy : MonoBehaviour
 				stanceTimer = stanceChangeCooldown;
 
 				audioManager.StartEnemyShooting();
+				
+				if (muzzleFlashPlaying == false)
+				{
+					muzzleFlash.Play();
+					muzzleFlashPlaying = true;
+				}
 			}
 		}
 		else
 		{
 			TransitionToState(State.Running);
-			audioManager.StopEnemyShooting();
+			muzzleFlashPlaying = false;
+			muzzleFlash.Stop();
 		}
 	}
 	
@@ -135,10 +158,12 @@ public class Enemy : MonoBehaviour
 	
 	private bool DetectPlayer(float DetectionRange)
 	{	
-		Vector3 direction = player.transform.position - transform.position;
-		float sqrDistance = direction.sqrMagnitude;
+        Vector3 origin = transform.position;
 
-		Vector3 origin = transform.position + Vector3.up * 1.5f;
+        Vector3 centerPoint = playerController.bounds.center;
+
+        Vector3 direction = centerPoint - origin;
+		float sqrDistance = direction.sqrMagnitude;
 
 		if (sqrDistance < DetectionRange * DetectionRange)
 		{
@@ -183,6 +208,8 @@ public class Enemy : MonoBehaviour
 		transform.rotation = targetRotation * Quaternion.Euler(0, 30, 0);
 		
 		playerHealthScript.takeDamage();
+		
+		audioManager.StartAttackingSound();
 	}
 	
 	public void takeDamage()
@@ -219,5 +246,11 @@ public class Enemy : MonoBehaviour
 		
 		audioManager.playDeathAudio();
 		audioManager.StopEnemyShooting();
+		audioManager.StopAttackingSound();
+		
+		muzzleFlashPlaying = false;
+		muzzleFlash.Stop();
+		
+		Destroy(gameObject, 5f);
 	}
 }
