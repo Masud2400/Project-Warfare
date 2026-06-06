@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.AI;
 
 public class Enemy : MonoBehaviour
 {
@@ -12,13 +13,16 @@ public class Enemy : MonoBehaviour
     }
 	
     private Animator anim;
-	private CharacterController controller;
+	private NavMeshAgent agent;
+	private AudioSource audioSource;
 	private State currentState = State.Running;
 	private float stanceTimer = 0f;
-	AudioManager audioManager;
-	private float verticalVelocity = 0f;
-	private float gravity = -9.81f;
 	private bool muzzleFlashPlaying = false;
+	
+	private ModelSpawner spawner;
+	private Transform mySpawnPoint;
+	
+	private bool isDead = false;
 
 	[Header ("Game Objects")]
     [SerializeField] private GameObject player;
@@ -31,21 +35,42 @@ public class Enemy : MonoBehaviour
 	[SerializeField] private float DetectionRangeAttacking = 2f;
 	[SerializeField] private float health = 100f;
 	[SerializeField] private float stanceChangeCooldown = 1.5f;
+	
+	[Header ("Audio Clips")]
+	[SerializeField] private AudioClip shootClip;
+	[SerializeField] private AudioClip deathClip;
+	[SerializeField] private AudioClip attackClip;
 
 	void Awake()
 	{
-		audioManager = GameObject.FindGameObjectWithTag("Audio").GetComponent<AudioManager>();
+		player = GameObject.FindGameObjectWithTag("Player");
+
+		if (player != null)
+		{
+			playerHealthScript = player.GetComponent<PlayerHealth>();
+			playerController = player.GetComponent<CharacterController>();
+		}
+		
+		audioSource = GetComponent<AudioSource>();
 	}
 
     void Start()
     {
         anim = GetComponentInChildren<Animator>();
-		controller = GetComponent<CharacterController>();
+		agent = GetComponent<NavMeshAgent>();
     }
 
     void Update()
     {	
-		if(currentState == State.Dead) return;
+		if(currentState == State.Dead)
+		{
+			if (anim.GetCurrentAnimatorStateInfo(0).IsName("Dying"))
+			{
+				anim.applyRootMotion = true;
+			}
+			
+			return;
+		}
 		
 		if (stanceTimer > 0)
 		{
@@ -59,33 +84,11 @@ public class Enemy : MonoBehaviour
 
         ExecuteCurrentState();
 		
-		if (controller.isGrounded)
-		{
-			verticalVelocity = -2f;
-		}
-		else
-		{
-			verticalVelocity += gravity * Time.deltaTime;
-		}
-
-		Vector3 gravityMove = new Vector3(0, verticalVelocity, 0);
-		controller.Move(gravityMove * Time.deltaTime);
+		ControlAudio();
     }
 	
 	private void DetermineState(bool atAttackingRange, bool atShootingRange)
-	{
-		//------------- Audio Part -----------------//
-		if(currentState == State.Attacking || currentState == State.Running)
-		{
-			audioManager.StopEnemyShooting();
-		}
-		
-		if(currentState != State.Attacking)
-		{
-			audioManager.StopAttackingSound();
-		}
-		//------------- End -----------------//
-		
+	{	
 		if (atAttackingRange)
 		{
 			TransitionToState(State.Attacking);
@@ -105,11 +108,9 @@ public class Enemy : MonoBehaviour
 			{
 				State randomShootState = (Random.Range(0, 2) == 0) ? State.StandingShooting : State.CrouchShooting;
 				TransitionToState(randomShootState);
-
-				stanceTimer = stanceChangeCooldown;
-
-				audioManager.StartEnemyShooting();
 				
+				stanceTimer = stanceChangeCooldown;
+				  
 				if (muzzleFlashPlaying == false)
 				{
 					muzzleFlash.Play();
@@ -130,6 +131,19 @@ public class Enemy : MonoBehaviour
         if (currentState == newState) return;
 
         currentState = newState;
+		
+		if (agent != null && agent.isOnNavMesh)
+        {
+            if (currentState == State.Running)
+            {
+                agent.isStopped = false; 
+            }
+            else
+            {
+                agent.isStopped = true; 
+                agent.velocity = Vector3.zero;
+            }
+        }
 
         if (anim != null)
         {
@@ -172,6 +186,7 @@ public class Enemy : MonoBehaviour
 				if (hit.collider.gameObject == player)
 				{
 					playerHealthScript.takeDamage();
+					
 					return true;
 				}
 			}
@@ -183,11 +198,9 @@ public class Enemy : MonoBehaviour
     {
         if(player != null)
         {	
-            Vector3 lookDirection = Vector3.ProjectOnPlane(player.transform.position - transform.position, Vector3.up).normalized;
-			
-			if (lookDirection.sqrMagnitude != 0f)
-			{
-				transform.forward = lookDirection;
+            if(player != null && agent != null && agent.isOnNavMesh)
+			{	
+				agent.SetDestination(player.transform.position);
 			}
         }
     }
@@ -208,8 +221,20 @@ public class Enemy : MonoBehaviour
 		transform.rotation = targetRotation * Quaternion.Euler(0, 30, 0);
 		
 		playerHealthScript.takeDamage();
-		
-		audioManager.StartAttackingSound();
+	}
+	
+	public void SetupSpawner(ModelSpawner srcSpawner, Transform srcPoint)
+	{
+		spawner = srcSpawner;
+		mySpawnPoint = srcPoint;
+	}
+	
+	public void TriggerRespawn()
+	{
+		if (spawner != null && mySpawnPoint != null)
+		{
+			spawner.TrackRespawn(mySpawnPoint);
+		}
 	}
 	
 	public void takeDamage()
@@ -232,6 +257,19 @@ public class Enemy : MonoBehaviour
 	
 	private void Die()
 	{
+		if (isDead) return;
+		isDead = true;
+		
+		if (audioSource != null)
+		{
+			audioSource.Stop();
+			
+			if (deathClip != null)
+			{
+				audioSource.PlayOneShot(deathClip);
+			}
+		}
+		
 		currentState = State.Dead;
 		
 		if(anim != null)
@@ -239,18 +277,51 @@ public class Enemy : MonoBehaviour
 			anim.SetTrigger("isDead");
 		}
 		
-		if (controller != null)
-		{
-			controller.enabled = false;
-		}
-		
-		audioManager.playDeathAudio();
-		audioManager.StopEnemyShooting();
-		audioManager.StopAttackingSound();
+		if (agent != null)
+        {
+            agent.enabled = false;
+        }
 		
 		muzzleFlashPlaying = false;
 		muzzleFlash.Stop();
 		
+		TriggerRespawn();
+		
 		Destroy(gameObject, 5f);
+	}
+	
+	private void ControlAudio()
+	{
+		AudioClip targetClip = null;
+		bool shouldLoop = false;
+
+		if (currentState == State.StandingShooting || currentState == State.CrouchShooting)
+		{
+			targetClip = shootClip;
+			shouldLoop = true;
+		}
+		else if (currentState == State.Attacking)
+		{
+			targetClip = attackClip;
+			shouldLoop = true; 
+		}
+
+		if (targetClip != null)
+		{
+			if (audioSource.clip != targetClip || !audioSource.isPlaying)
+			{
+				audioSource.clip = targetClip;
+				audioSource.loop = shouldLoop;
+				audioSource.Play();
+			}
+		}
+		else
+		{
+			if (audioSource.isPlaying)
+			{
+				audioSource.Stop();
+				audioSource.clip = null; 
+			}
+		}
 	}
 }

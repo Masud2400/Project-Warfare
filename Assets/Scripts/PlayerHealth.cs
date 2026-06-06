@@ -13,6 +13,7 @@ public class PlayerHealth : MonoBehaviour
 	[SerializeField] private Image damageAlertImage;
 	[SerializeField] private Animator anim;
 	[SerializeField] private Transform mainCam;
+	[SerializeField] private Image healthImage;
 
     private float damageTimer;
     private float healTimer;
@@ -42,7 +43,7 @@ public class PlayerHealth : MonoBehaviour
             if (healTimer <= 0f && currentHealth < maxHealth)
             {
                 currentHealth = maxHealth;
-                Debug.Log("Health fully restored!");
+				UpdateHealthColor();
             }
         }
 
@@ -88,7 +89,6 @@ public class PlayerHealth : MonoBehaviour
         {
             currentHealth -= 2;
             damageTimer = damageInterval; 
-            Debug.Log($"Player took damage. Health: {currentHealth}");
         }
 		
 		if (damageAlertImage != null)
@@ -101,5 +101,18 @@ public class PlayerHealth : MonoBehaviour
 			color.a = alpha;
 			damageAlertImage.color = color;
 		}
+		
+		UpdateHealthColor();
     }
+	
+	private void UpdateHealthColor()
+	{
+        float fillRatio = currentHealth / maxHealth;
+        
+        fillRatio = Mathf.Clamp01(fillRatio);
+
+        healthImage.fillAmount = fillRatio;
+
+        healthImage.color = Color.Lerp(Color.red, Color.blue, fillRatio);
+	}
 }

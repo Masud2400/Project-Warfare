@@ -86,6 +86,8 @@ public class PlayerMotor : MonoBehaviour
         controller = GetComponent<CharacterController>();
         targetHeight = CapsuleStandingHeigth;
         currentSpeed = walkingSpeed;
+		
+		audioManager.PlayBackground();
     }
     
     void Update()

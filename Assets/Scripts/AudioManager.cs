@@ -8,18 +8,14 @@ public class AudioManager : MonoBehaviour
 	[SerializeField] private AudioSource Sprintingsource;
 	[SerializeField] private AudioSource shootingSource;
 	[SerializeField] private AudioSource reloadingSource;
-	[SerializeField] private AudioSource deathSource;
-	[SerializeField] private AudioSource enemyShootingSource;
-	[SerializeField] private AudioSource attackingSource;
+	[SerializeField] private AudioSource backgroundSource;
 
     [Header("Music Clips")]
     public AudioClip footsteps;
 	public AudioClip runningSteps;
 	public AudioClip shooting;
 	public AudioClip reloading;
-	public AudioClip death;
-	public AudioClip enemyShooting;
-	public AudioClip attackingSound;
+	public AudioClip backgroundSound;
 
     public void StartFootsteps()
     {
@@ -69,43 +65,10 @@ public class AudioManager : MonoBehaviour
 		reloadingSource.Play();
 	}
 	
-	public void playDeathAudio()
+	public void PlayBackground()
 	{
-		StartCoroutine(DeathAudio());
-	}
-	
-	private IEnumerator DeathAudio()
-	{
-		yield return new WaitForSeconds(0.5f);
-		
-		deathSource.clip = death;
-		deathSource.Play();
-	}
-	
-	public void StartEnemyShooting()
-	{
-		enemyShootingSource.clip = enemyShooting;
-		enemyShootingSource.loop = true;
-		enemyShootingSource.Play();
-	}
-	
-	public void StopEnemyShooting()
-	{
-		enemyShootingSource.Stop();
-	}
-	
-	public void StartAttackingSound()
-	{
-		if(!attackingSource.isPlaying)
-		{
-			attackingSource.clip = attackingSound;
-			attackingSource.loop = true;
-			attackingSource.Play();
-		}
-	}
-	
-	public void StopAttackingSound()
-	{
-		attackingSource.Stop();
+		backgroundSource.clip = backgroundSound;
+		backgroundSource.loop = true;
+		backgroundSource.Play();
 	}
 }
