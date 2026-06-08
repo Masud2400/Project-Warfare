@@ -1,6 +1,8 @@
 using UnityEngine;
 using UnityEngine.UI;
+using System.Collections;
 using UnityEngine.Rendering;
+using UnityEngine.SceneManagement;
 using UnityEngine.Rendering.Universal;
 
 public class PlayerHealth : MonoBehaviour
@@ -71,6 +73,8 @@ public class PlayerHealth : MonoBehaviour
             {
                 depthOfField.mode.value = DepthOfFieldMode.Bokeh;
             }
+			
+			RestartScene();
 		}
     }
 
@@ -114,5 +118,18 @@ public class PlayerHealth : MonoBehaviour
         healthImage.fillAmount = fillRatio;
 
         healthImage.color = Color.Lerp(Color.red, Color.blue, fillRatio);
+	}
+	
+	private void RestartScene()
+    {
+        string currentSceneName = SceneManager.GetActiveScene().name;
+        StartCoroutine(LoadMainScene(currentSceneName));
+    }
+	
+	private IEnumerator LoadMainScene(string sceneName)
+	{
+		yield return new WaitForSeconds(3.5f);
+		
+		SceneManager.LoadScene(sceneName);
 	}
 }

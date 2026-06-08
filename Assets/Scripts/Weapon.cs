@@ -17,11 +17,13 @@ public class Weapon : MonoBehaviour
 	private int bulletCount = 50;
 	AudioManager audioManager;
 	private State currentState = State.Idle;
+	private float nextFireTime;
 	
 	[Header ("Game objects")]
     [SerializeField] private Camera mainCamera;
 	[SerializeField] private PlayerMotor motorScript;
 	[SerializeField] private TMP_Text bullets;
+	[SerializeField] private float fireRate = 0.1f;
     
     [Header("Weapon settings")]
     [SerializeField] private float range = 100f;
@@ -86,17 +88,22 @@ public class Weapon : MonoBehaviour
 	}
     
     public void Shoot()
-    {
+    {	
 		if (bulletCount <= 0)
 		{
 			StopShooting();
 			return;
 		}
 		
+		if (Time.time < nextFireTime) return; 
+
+        nextFireTime = Time.time + fireRate;
+		
 		if (!shootingState)
 		{
 			shootingState = true;
 			audioManager.StartShootingAudio();
+			muzzleFlash.Play();
 		}
 		
         RaycastHit hit;
@@ -109,7 +116,6 @@ public class Weapon : MonoBehaviour
 				enemy.takeDamage();
             }
         }
-		muzzleFlash.Play();
 		
 		if (bulletCount > 0)
         {
@@ -122,6 +128,7 @@ public class Weapon : MonoBehaviour
 	{
 		shootingState = false;
 		audioManager.StopShootingAudio();
+		muzzleFlash.Stop();
 	}
 	
 	public void Reload()

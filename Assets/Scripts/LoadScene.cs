@@ -37,4 +37,9 @@ public class LoadScene : MonoBehaviour
             yield return null;
         }
     }
+	
+	public void LoadFirstScene()
+	{
+		SceneManager.LoadScene("FirstScene");
+	}
 }
